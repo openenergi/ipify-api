@@ -32,7 +32,7 @@ func main() {
 	handler := cors.Default().Handler(router)
 
 	// Start the server.
-	port := os.Getenv("PORT")
+	port := os.Getenv("HTTP_PLATFORM_PORT")
 	if port == "" {
 		port = "3000"
 	}
