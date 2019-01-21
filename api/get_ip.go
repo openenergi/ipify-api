@@ -30,12 +30,24 @@ func GetIP(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// list.  We do this because this is always the *origin* IP address, which
 	// is the *true* IP of the user.  For more information on this, see the
 	// Wikipedia page: https://en.wikipedia.org/wiki/X-Forwarded-For
-	ip := net.ParseIP(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0]).String()
+	ip := net.ParseIP(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0])
+
+	// If this doesn't work, try the X-Original-Host header as per
+	// https://feedback.azure.com/forums/217313-networking/suggestions/33657763-add-the-x-forwarded-host-header-to-application-gat
+	if ip == nil {
+		ip = net.ParseIP(strings.Split(r.Header.Get("X-Original-Host"), ",")[0])
+	}
+
+	//  Finally, fall back to the request host
+	if ip == nil {
+		ip = net.ParseIP(r.RemoteAddr)
+	}
+
 
 	// If the user specifies a 'format' querystring, we'll try to return the
 	// user's IP address in the specified format.
 	if format, ok := r.Form["format"]; ok && len(format) > 0 {
-		jsonStr, _ := json.Marshal(models.IPAddress{ip})
+		jsonStr, _ := json.Marshal(models.IPAddress{ip.String()})
 
 		switch format[0] {
 		case "json":
@@ -59,5 +71,5 @@ func GetIP(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// If no 'format' querystring was specified, we'll default to returning the
 	// IP in plain text.
 	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, ip)
+	fmt.Fprintf(w, ip.String())
 }
